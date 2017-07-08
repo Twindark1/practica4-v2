@@ -23,7 +23,7 @@ public class Routes {
     private static String filtrar = "";
     private static List<Articulo> arts = new ArrayList<>();
 
-    private static void startProyect() {
+    public static void startProyect() {
 
         staticFiles.location("/public");
         final Configuration configuration = new Configuration(new Version(2, 3, 0));
@@ -65,13 +65,7 @@ public class Routes {
             resultTemplate.process(attributes, writer);
             return writer;
         }); 
-
-        Spark.post("/home", (request, response) -> {
-
-            filtrar = request.queryParams("filtro");
-            response.redirect("/home#page1");
-            return "";
-        }); 
+        
 
         Spark.get("/post/:artID", (request, response) -> {
             Usuario user = request.session(true).attribute("usuario");
@@ -110,6 +104,7 @@ public class Routes {
 
             return writer;
         }); 
+        
 
         Spark.get("/login", (request, response) -> {
 
@@ -119,7 +114,216 @@ public class Routes {
 
             resultTemplate.process(attributes, writer);
             return writer;
-        }); 
+        });
+        
+        Spark.get("/logout", (resquest, response) -> {
+
+            Session ses = resquest.session(true);
+            ses.invalidate();
+            response.redirect("/home#page1");
+            return "";
+        });
+
+        Spark.get("/eliminarArticulo/:artID", (request, response) -> {
+
+            ArticuloServices.getInstancia().eliminar(Long.parseLong(request.params("artID")));
+            response.redirect("/home#page1");
+
+            return "";
+        });
+
+        Spark.get("/agregarArticulo", (request, response) -> {
+
+            Template resultTemplate = configuration.getTemplate("templates/agregarArt.ftl");
+            StringWriter writer = new StringWriter();
+            Map<String, Object> attributes = new HashMap<>();
+            Usuario us = request.session(true).attribute("usuario");
+
+            attributes.put("usuario", us);
+            resultTemplate.process(attributes, writer);
+            return writer;
+        });
+
+
+        Spark.get("/adminRegister", (request, response) -> {
+
+            Template resultTemplate = configuration.getTemplate("templates/registerAdmin.ftl");
+            StringWriter writer = new StringWriter();
+            Map<String, Object> attributes = new HashMap<>();
+
+            resultTemplate.process(attributes, writer);
+            return writer;
+        });
+
+        Spark.get("/userRegister", (request, response) -> {
+
+            Template resultTemplate = configuration.getTemplate("templates/registerUser.ftl");
+            StringWriter writer = new StringWriter();
+            Map<String, Object> attributes = new HashMap<>();
+
+            resultTemplate.process(attributes, writer);
+            return writer;
+        });
+
+        Spark.get("/modificarArticulo/:artID", (request, response) -> {
+
+            modificar = "true";
+            response.redirect("/post/" + request.params("artID"));
+
+            return "";
+        });
+
+        Spark.get("/borrarComentario/:artID/:ID", (request, response) -> {
+
+            Set<Comentario> tCom = new HashSet<Comentario>();
+            Articulo a = ArticuloServices.getInstancia().find(Long.parseLong(request.params("artID")));
+            Comentario com = ComentarioServices.getInstancia().find(Long.parseLong(request.params("ID")));
+            for (Comentario c: a.getSetComentarios()) {
+                if(c.getId() != com.getId()) {
+                    tCom.add(c);
+                }
+            }
+            a.setSetComentarios(tCom);
+            ArticuloServices.getInstancia().editar(a);
+            ComentarioServices.getInstancia().eliminar(Long.parseLong(request.params("ID")));
+            response.redirect("/post/"+request.params("artID"));
+
+            return "";
+        });
+
+        Spark.get("/adminUsuarios", (request, response) -> {
+
+            Usuario user = request.session().attribute("usuario");
+
+            Template resultTemplate = configuration.getTemplate("templates/adminUsuarios.ftl");
+            StringWriter writer = new StringWriter();
+            Map<String, Object> attributes = new HashMap<>();
+
+            List<Usuario> urs = UsuarioServices.getInstancia().findAll();
+            attributes.put("User", user);
+            attributes.put("listaUsuarios", urs);
+            resultTemplate.process(attributes, writer);
+            return writer;
+        });
+
+        Spark.get("/asignarAdmin/:username/:administrador", (request, response) -> {
+
+            Usuario us = UsuarioServices.getInstancia().find(request.params("username"));
+            if(request.params("administrador").equals("true")) {
+                us.setAdministrator(false);
+                UsuarioServices.getInstancia().editar(us);
+            } else {
+                us.setAdministrator(true);
+                us.setAuthor(true);
+                UsuarioServices.getInstancia().editar(us);
+            }
+            response.redirect("/adminUsuarios");
+
+            return "";
+        });
+
+        Spark.get("/asignarAutor/:username/:autor", (request, response) -> {
+
+            Usuario us = UsuarioServices.getInstancia().find(request.params("username"));
+            if(request.params("autor").equals("true")) {
+                us.setAdministrator(false);
+                us.setAuthor(false);
+                UsuarioServices.getInstancia().editar(us);
+            } else {
+                us.setAuthor(true);
+                UsuarioServices.getInstancia().editar(us);
+            }
+            response.redirect("/adminUsuarios");
+
+            return "";
+        });
+
+        Spark.get("/meGustaArticulo/:artID", (request, response) -> {
+
+            Usuario us = request.session(true).attribute("usuario");
+            Articulo ar = ArticuloServices.getInstancia().find(Long.parseLong(request.params("artID")));
+
+            Set<Usuario> tUsers = new HashSet<Usuario>();
+            for (Usuario u: ar.getuDislikes()) {
+                if(!u.getUsername().equals(us.getUsername())) {
+                    tUsers.add(u);
+                }
+            }
+            ar.setuDislikes(tUsers);
+            ar.getuLikes().add(us);
+            ArticuloServices.getInstancia().editar(ar);
+            response.redirect("/post/" + request.params("artID"));
+
+            return "";
+        });
+
+        Spark.get("/noMeGustaArticulo/:artID", (request, response) -> {
+
+            Usuario us = request.session(true).attribute("usuario");
+            Articulo ar = ArticuloServices.getInstancia().find(Long.parseLong(request.params("artID")));
+
+            Set<Usuario> tUsers = new HashSet<Usuario>();
+            for (Usuario u: ar.getuLikes()) {
+                if(!u.getUsername().equals(us.getUsername())) {
+                    tUsers.add(u);
+                }
+            }
+            ar.setuLikes(tUsers);
+            ar.getuDislikes().add(us);
+            ArticuloServices.getInstancia().editar(ar);
+            response.redirect("/post/" + request.params("artID"));
+
+            return "";
+        });
+
+        Spark.get("/meGustaComentario/:artID/:ID", (request, response) -> {
+
+            Usuario us = request.session(true).attribute("usuario");
+            Comentario co = ComentarioServices.getInstancia().find(Long.parseLong(request.params("ID")));
+            Articulo ar = ArticuloServices.getInstancia().find(Long.parseLong(request.params("artID")));
+
+            Set<Usuario> tUsers = new HashSet<Usuario>();
+            for (Usuario u: co.getuDislikes()) {
+                if(!u.getUsername().equals(us.getUsername())) {
+                    tUsers.add(u);
+                }
+            }
+            co.setuDislikes(tUsers);
+            co.getuLikes().add(us);
+            ComentarioServices.getInstancia().editar(co);
+            ArticuloServices.getInstancia().editar(ar);
+            response.redirect("/post/" + request.params("artID"));
+
+            return "";
+        });
+
+        Spark.get("/noMeGustaComentario/:artID/:ID", (request, response) -> {
+
+            Usuario us = request.session(true).attribute("usuario");
+            Comentario co = ComentarioServices.getInstancia().find(Long.parseLong(request.params("ID")));
+            Articulo ar = ArticuloServices.getInstancia().find(Long.parseLong(request.params("artID")));
+
+            Set<Usuario> tUsers = new HashSet<Usuario>();
+            for (Usuario u: co.getuLikes()) {
+                if(!u.getUsername().equals(us.getUsername())) {
+                    tUsers.add(u);
+                }
+            }
+            co.setuLikes(tUsers);
+            co.getuDislikes().add(us);
+            ComentarioServices.getInstancia().editar(co);
+            ArticuloServices.getInstancia().editar(ar);
+            response.redirect("/post/" + request.params("artID"));
+
+            return "";
+        });
+
+        Spark.post("/home", (request, response) -> {
+
+            filtrar = request.queryParams("filtro");
+            response.redirect("/home#page1");
+            return "";
+        });
 
         Spark.post("/login", (request, response) -> {
 
@@ -133,25 +337,8 @@ public class Routes {
                 response.redirect("/login"); //Mostrar un error aqui
             }
             return "";
-        }); 
+        });
 
-        Spark.get("/logout", (resquest, response) -> {
-
-            Session ses = resquest.session(true);
-            ses.invalidate();
-            response.redirect("/home#page1");
-            return "";
-        }); 
-
-        Spark.get("/adminRegister", (request, response) -> {
-
-            Template resultTemplate = configuration.getTemplate("templates/registerAdmin.ftl");
-            StringWriter writer = new StringWriter();
-            Map<String, Object> attributes = new HashMap<>();
-
-            resultTemplate.process(attributes, writer);
-            return writer;
-        }); 
 
         Spark.post("/adminRegister", (request, response) -> {
 
@@ -169,17 +356,7 @@ public class Routes {
                 response.redirect("/home#page1");
             }
             return "";
-        });  
-
-        Spark.get("/userRegister", (request, response) -> {
-
-            Template resultTemplate = configuration.getTemplate("templates/registerUser.ftl");
-            StringWriter writer = new StringWriter();
-            Map<String, Object> attributes = new HashMap<>();
-
-            resultTemplate.process(attributes, writer);
-            return writer;
-        }); 
+        });
 
         Spark.post("/userRegister", (request, response) -> {
 
@@ -200,15 +377,7 @@ public class Routes {
                 System.out.println(e);
             }
             return "";
-        }); 
-
-        Spark.get("/modificarArticulo/:artID", (request, response) -> {
-
-            modificar = "true";
-            response.redirect("/post/" + request.params("artID"));
-
-            return "";
-        }); 
+        });
 
         Spark.post("/modificarArticulo/:artID", (request, response) -> {
 
@@ -234,27 +403,7 @@ public class Routes {
 
             return "";
         }); 
-
-        Spark.get("/eliminarArticulo/:artID", (request, response) -> {
-
-            ArticuloServices.getInstancia().eliminar(Long.parseLong(request.params("artID")));
-            response.redirect("/home#page1");
-
-            return "";
-        }); 
-
-        Spark.get("/agregarArticulo", (request, response) -> {
-
-            Template resultTemplate = configuration.getTemplate("templates/agregarArt.ftl");
-            StringWriter writer = new StringWriter();
-            Map<String, Object> attributes = new HashMap<>();
-            Usuario us = request.session(true).attribute("usuario");
-
-            attributes.put("usuario", us);
-            resultTemplate.process(attributes, writer);
-            return writer;
-        }); 
-
+        
         Spark.post("/agregarArticulo", (request, response) -> {
 
             String[] etiquetas = request.queryParams("etiquetas").split(",");
@@ -284,152 +433,7 @@ public class Routes {
 
             response.redirect("/post/" + request.params("artID"));
             return "";
-        }); 
-
-        Spark.get("/borrarComentario/:artID/:ID", (request, response) -> {
-
-            Set<Comentario> tCom = new HashSet<Comentario>();
-            Articulo a = ArticuloServices.getInstancia().find(Long.parseLong(request.params("artID")));
-            Comentario com = ComentarioServices.getInstancia().find(Long.parseLong(request.params("ID")));
-            for (Comentario c: a.getSetComentarios()) {
-                if(c.getId() != com.getId()) {
-                    tCom.add(c);
-                }
-            }
-            a.setSetComentarios(tCom);
-            ArticuloServices.getInstancia().editar(a);
-            ComentarioServices.getInstancia().eliminar(Long.parseLong(request.params("ID")));
-            response.redirect("/post/"+request.params("artID"));
-
-            return "";
-        }); 
-
-        Spark.get("/adminUsuarios", (request, response) -> {
-
-            Usuario user = request.session().attribute("usuario");
-
-            Template resultTemplate = configuration.getTemplate("templates/adminUsuarios.ftl");
-            StringWriter writer = new StringWriter();
-            Map<String, Object> attributes = new HashMap<>();
-
-            List<Usuario> urs = UsuarioServices.getInstancia().findAll();
-            attributes.put("User", user);
-            attributes.put("listaUsuarios", urs);
-            resultTemplate.process(attributes, writer);
-            return writer;
-        }); 
-
-        Spark.get("/asignarAdmin/:username/:administrador", (request, response) -> {
-
-            Usuario us = UsuarioServices.getInstancia().find(request.params("username"));
-            if(request.params("administrador").equals("true")) {
-                us.setAdministrator(false);
-                UsuarioServices.getInstancia().editar(us);
-            } else {
-                us.setAdministrator(true);
-                us.setAuthor(true);
-                UsuarioServices.getInstancia().editar(us);
-            }
-            response.redirect("/adminUsuarios");
-
-            return "";
-        }); 
-
-        Spark.get("/asignarAutor/:username/:autor", (request, response) -> {
-
-            Usuario us = UsuarioServices.getInstancia().find(request.params("username"));
-            if(request.params("autor").equals("true")) {
-                us.setAdministrator(false);
-                us.setAuthor(false);
-                UsuarioServices.getInstancia().editar(us);
-            } else {
-                us.setAuthor(true);
-                UsuarioServices.getInstancia().editar(us);
-            }
-            response.redirect("/adminUsuarios");
-
-            return "";
-        }); 
-
-        Spark.get("/meGustaArticulo/:artID", (request, response) -> {
-
-            Usuario us = request.session(true).attribute("usuario");
-            Articulo ar = ArticuloServices.getInstancia().find(Long.parseLong(request.params("artID")));
-
-            Set<Usuario> tUsers = new HashSet<Usuario>();
-            for (Usuario u: ar.getuDislikes()) {
-                if(!u.getUsername().equals(us.getUsername())) {
-                    tUsers.add(u);
-                }
-            }
-            ar.setuDislikes(tUsers);
-            ar.getuLikes().add(us);
-            ArticuloServices.getInstancia().editar(ar);
-            response.redirect("/post/" + request.params("artID"));
-
-            return "";
-        }); 
-
-        Spark.get("/noMeGustaArticulo/:artID", (request, response) -> {
-
-            Usuario us = request.session(true).attribute("usuario");
-            Articulo ar = ArticuloServices.getInstancia().find(Long.parseLong(request.params("artID")));
-
-            Set<Usuario> tUsers = new HashSet<Usuario>();
-            for (Usuario u: ar.getuLikes()) {
-                if(!u.getUsername().equals(us.getUsername())) {
-                    tUsers.add(u);
-                }
-            }
-            ar.setuLikes(tUsers);
-            ar.getuDislikes().add(us);
-            ArticuloServices.getInstancia().editar(ar);
-            response.redirect("/post/" + request.params("artID"));
-
-            return "";
-        }); 
-
-        Spark.get("/meGustaComentario/:artID/:ID", (request, response) -> {
-
-            Usuario us = request.session(true).attribute("usuario");
-            Comentario co = ComentarioServices.getInstancia().find(Long.parseLong(request.params("ID")));
-            Articulo ar = ArticuloServices.getInstancia().find(Long.parseLong(request.params("artID")));
-
-            Set<Usuario> tUsers = new HashSet<Usuario>();
-            for (Usuario u: co.getuDislikes()) {
-                if(!u.getUsername().equals(us.getUsername())) {
-                    tUsers.add(u);
-                }
-            }
-            co.setuDislikes(tUsers);
-            co.getuLikes().add(us);
-            ComentarioServices.getInstancia().editar(co);
-            ArticuloServices.getInstancia().editar(ar);
-            response.redirect("/post/" + request.params("artID"));
-
-            return "";
-        }); 
-
-        Spark.get("/noMeGustaComentario/:artID/:ID", (request, response) -> {
-
-            Usuario us = request.session(true).attribute("usuario");
-            Comentario co = ComentarioServices.getInstancia().find(Long.parseLong(request.params("ID")));
-            Articulo ar = ArticuloServices.getInstancia().find(Long.parseLong(request.params("artID")));
-
-            Set<Usuario> tUsers = new HashSet<Usuario>();
-            for (Usuario u: co.getuLikes()) {
-                if(!u.getUsername().equals(us.getUsername())) {
-                    tUsers.add(u);
-                }
-            }
-            co.setuLikes(tUsers);
-            co.getuDislikes().add(us);
-            ComentarioServices.getInstancia().editar(co);
-            ArticuloServices.getInstancia().editar(ar);
-            response.redirect("/post/" + request.params("artID"));
-
-            return "";
-        }); 
+        });
 
         before("/*",(request, response) -> {
 
@@ -443,40 +447,7 @@ public class Routes {
             } catch (Exception e) {
                 response.redirect("/home#page1");
             }
-        }); 
-
-        before("/adminRegister",(request, response) -> {
-
-            List<Usuario> users = UsuarioServices.getInstancia().findAll();
-            if(users.size() > 0){
-                response.redirect("/login");
-            }
-        }); 
-
-        before("/agregarComentario/*",(request, response) -> {
-
-            autorizado(request, response);
-        }); 
-
-        before("/agregarArticulo",(request, response) -> {
-
-            autorizado(request, response);
-        }); 
-
-        before("/borrarComentario/*",(request, response) -> {
-
-            autorizado(request, response);
-        });  
-
-        before("/eliminarArticulo/*",(request, response) -> {
-
-            autorizado(request, response);
-        });  
-
-        before("/modificarArticulo/*",(request, response) -> {
-
-            autorizado(request, response);
-        });  
+        });
 
         before("/adminUsuarios",(request, response) -> {
             Usuario user = request.session().attribute("usuario");
@@ -488,7 +459,25 @@ public class Routes {
                     response.redirect("/login");
                 }
             }
-        });  
+        });
+
+        before("/adminRegister",(request, response) -> {
+
+            List<Usuario> users = UsuarioServices.getInstancia().findAll();
+            if(users.size() > 0){
+                response.redirect("/login");
+            }
+        }); 
+
+        before("/agregarComentario/*",Routes::Autentificacion);
+
+        before("/agregarArticulo",Routes::Autentificacion);
+
+        before("/borrarComentario/*",Routes::Autentificacion);
+
+        before("/eliminarArticulo/*",Routes::Autentificacion); 
+
+        before("/modificarArticulo/*",Routes::Autentificacion);
 
         before("/asignarAdmin/:*/:*", (request, response) -> {
             response.redirect("/adminUsuarios");
@@ -498,24 +487,15 @@ public class Routes {
             response.redirect("/adminUsuarios");
         });  
 
-        before("/meGustaArticulo/:*", (request, response) -> {
-            autorizado(request, response);
-        });  
+        before("/meGustaArticulo/:*", Routes::Autentificacion);
 
-        before("/noMeGustaArticulo/:*", (request, response) -> {
-            autorizado(request, response);
-        });  
+        before("/noMeGustaArticulo/:*",Routes::Autentificacion);
 
-        before("/meGustaComentario/:*/:*", (request, response) -> {
-            autorizado(request, response);
-        });  
+        before("/meGustaComentario/:*/:*", Routes::Autentificacion);
 
-        before("/noMeGustaComentario/:*/:*", (request, response) -> {
-            autorizado(request, response);
-        });  
+        before("/noMeGustaComentario/:*/:*", Routes::Autentificacion);
 
         after("/post/:*", (request, response) -> {
-
             modificar = "false";
         });  
     }
@@ -578,13 +558,13 @@ public class Routes {
      return finalText + "...";
     }
 
-    private static void autorizado(Request request, Response response) {
+    private static void Autentificacion(Request request, Response response) {
 
         Session ses = request.session(true);
         Usuario user = ses.attribute("usuario");
 
         if(user == null){
-            halt(401, "No Autorizado");
+            halt(401, "No Autentificacion");
         }
     }
 

@@ -20,7 +20,7 @@
 
 <div class="wrapper">
     <form class="form-signin" method="post" action="/userRegister">
-        <a href="/home#page1"><h1 style="font-size: 60px; font-family: 'Helvetica Neue'" class="text-center text-primary text-uppercase">Bloggify</h1> </a>
+        <a href="/home#page1"><h1 style="font-size: 60px; font-family: 'Helvetica Neue'" class="text-center text-primary text-uppercase">PUCMM</h1> </a>
         <hr>
         <h2 class="title form-signin-heading text-center">Registrarse!</h2>
         <h4 class="subtitle text-center">Crea tu cuenta de acceso a la aplicacion</h4>

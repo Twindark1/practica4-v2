@@ -20,7 +20,7 @@
 
 <div class="wrapper">
     <form class="form-signin" method="post">
-        <a href="/home#page1"><h1 style="font-size: 60px; font-family: 'Helvetica Neue'" class="text-center text-primary text-uppercase">Bloggify</h1> </a>
+        <a href="/home#page1"><h1 style="font-size: 60px; font-family: 'Helvetica Neue'" class="text-center text-primary text-uppercase">PUCMM</h1> </a>
 
         <hr>
 

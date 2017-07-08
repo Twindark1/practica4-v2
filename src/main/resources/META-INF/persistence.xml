@@ -5,10 +5,10 @@
              version="2.1">
     <persistence-unit name="MiUnidadPersistencia" transaction-type="RESOURCE_LOCAL">
         <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
-        <class>entidades.Usuario</class>
-        <class>entidades.Comentario</class>
-        <class>entidades.Etiqueta</class>
-        <class>entidades.Articulo</class>
+        <class>Logica.Usuario</class>
+        <class>Logica.Comentario</class>
+        <class>Logica.Etiqueta</class>
+        <class>Logica.Articulo</class>
         <properties>
             <!--<property name="javax.persistence.jdbc.url" value="jdbc:h2:mem:test" />-->
             <property name="javax.persistence.jdbc.url" value="jdbc:h2:tcp://localhost/~/Practica4" />
